@@ -2,22 +2,28 @@ package equipment.configuration;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-import equipment.Equipment;
-import equipment.implementation.NetworkEquipment;
 import exception.NoSuchEquipmentException;
-import utility.NameUtil;
 import utility.ErrorsUtil;
+import utility.NameUtil;
 
-import java.util.UUID;
+import java.util.*;
 
 public final class NetworkEquipmentRegistry {
+    public static final List<EquipmentDetails> universalEquipmentDetails = new ArrayList<>();
 
+    NetworkEquipmentRegistry(String program) {
+        this.program = program;
+    }
+
+    public final String program;
     private final BiMap<UUID,String> equipmentTypeIdToName = HashBiMap.create();
 
     public void addEquipmentToRegistry(String name) {
         String standardizedName = NameUtil.getStandardizedName(name);
         if ( !equipmentTypeIdToName.containsValue(standardizedName) ) {
-            equipmentTypeIdToName.put( UUID.randomUUID() , standardizedName );
+            UUID id = UUID.randomUUID();
+            equipmentTypeIdToName.put( id , standardizedName );
+            universalEquipmentDetails.add( new EquipmentDetails(this.program,standardizedName,id, Collections.emptyMap()) );
         }
     }
 
@@ -42,12 +48,27 @@ public final class NetworkEquipmentRegistry {
         return result ;
     }
 
-    public Equipment getEquipmentInstance(final String name) {
-        return getEquipmentInstance( getEquipmentTypeID(name) );
-    }
+    private final class EquipmentDetails {
+        String program;
+        String name;
+        UUID id;
+        Map<String,String> details;
 
-    public Equipment getEquipmentInstance(final UUID uuid) {
-        String name = equipmentTypeIdToName.get(uuid);
-        return new NetworkEquipment(name);
+        EquipmentDetails(String program, String name, UUID id, Map<String,String> details) {
+            this.program = program;
+            this.name = name;
+            this.id = id;
+            this.details = details;
+        }
+
+        @Override
+        public String toString() {
+            return "EquipmentDetails{" +
+                    "program='" + program + '\'' +
+                    ", name='" + name + '\'' +
+                    ", id=" + id +
+                    ", details=" + details +
+                    '}';
+        }
     }
 }

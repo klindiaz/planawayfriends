@@ -11,11 +11,11 @@ import java.util.*;
 
 public class NetworkEquipmentDesign {
 
-    public NetworkEquipmentDesign(NetworkEquipmentRegistry registry) {
-        this.registry = registry;
+    NetworkEquipmentDesign(String program) {
+        this.program = program;
     }
 
-    private final NetworkEquipmentRegistry registry;
+    private final String program;
     private final Map<UUID,List<UUID>> equipmentParents = new HashMap<>();
     private final Map<UUID,List<UUID>> equipmentChildren = new HashMap<>();
     private final Map<UUID,Map<UUID,Integer>> childrenLimits = new HashMap<>();   // < parentUUID , < childUUID , max > >
@@ -94,8 +94,8 @@ public class NetworkEquipmentDesign {
         public String toString() {
             return String.format(
                     "%s:%s - 1:%s",
-                    registry.getEquipmentTypeName(this.origin),
-                    registry.getEquipmentTypeName(this.destination),
+                    NetworkRegistryFactory.getNetworkEquipmentRegistry(program).getEquipmentTypeName(this.origin),
+                    NetworkRegistryFactory.getNetworkEquipmentRegistry(program).getEquipmentTypeName(this.destination),
                     this.value
             );
         }

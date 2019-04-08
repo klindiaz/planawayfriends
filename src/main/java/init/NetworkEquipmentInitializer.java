@@ -1,7 +1,7 @@
 package init;
 
-import equipment.configuration.NetworkEquipmentDesign;
-import equipment.configuration.NetworkEquipmentRegistry;
+import executor.EngineerFactory;
+import executor.NetworkEngineer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,21 +9,16 @@ import java.util.List;
 public class NetworkEquipmentInitializer {
 
     public static void init() {
-        List<Input> mockData = getMockData();
+        List<Input> mockData = getMockCCAPData();
+
+        NetworkEngineer engineer = EngineerFactory.getNetworkEngineer("ccap");
 
         for (Input input : mockData) {
-            NetworkEquipmentRegistry.addEquipmentToRegistry(input.origin);
-            NetworkEquipmentRegistry.addEquipmentToRegistry(input.child);
-
-            NetworkEquipmentDesign.addChildEquipment(
-                    NetworkEquipmentRegistry.getEquipmentTypeID(input.origin),
-                    NetworkEquipmentRegistry.getEquipmentTypeID(input.child),
-                    input.childToOrigin
-            );
+            engineer.addEquipmentAndSpec(input.origin , input.child , input.childToOrigin);
         }
     }
 
-    private static List<Input> getMockData() {
+    private static List<Input> getMockCCAPData() {
         List<Input> container = new ArrayList<>();
 
         container.add(new Input("chassis" , "line card", 7));

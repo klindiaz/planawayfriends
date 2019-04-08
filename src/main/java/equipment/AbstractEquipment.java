@@ -2,81 +2,83 @@ package equipment;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
-import equipment.configuration.NetworkEquipmentDesign;
-import equipment.configuration.NetworkEquipmentRegistry;
-import equipment.configuration.factory.NetworkDesignFactory;
-import equipment.configuration.factory.NetworkRegistryFactory;
+import equipment.configuration.NetworkDesignFactory;
+import equipment.configuration.NetworkRegistryFactory;
 import equipment.implementation.NetworkEquipment;
 import equipment.repository.NetworkEquipmentRepository;
 import utility.NameUtil;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public abstract class AbstractEquipment implements Equipment {
-    protected final NetworkEquipmentRegistry registry;
-    protected final NetworkEquipmentDesign design;
+    private final String program;
+    private final String uniqueName;
+    private final UUID equipmentTypeId;
+    private final String equipmentTypeName;
+    private final Multiset<UUID> quantityOfChildren = HashMultiset.create();
+    private final Map<String,Integer> equipmentNameToCount = new HashMap<>();
 
     public AbstractEquipment() {
-        super();
+        this.program = "NONE";
         this.uniqueName = "NONE";
         this.equipmentTypeName = "NULL OBJECT PATTERN";
         this.equipmentTypeId = UUID.randomUUID();
-        this.registry = NetworkRegistryFactory.createNetworkEquipmentRegistry(UUID.randomUUID().toString());
-        this.design = NetworkDesignFactory.createNetworkEquipmentDesign(UUID.randomUUID().toString());
     }
 
-    public AbstractEquipment(String name ,
-                             NetworkEquipmentRegistry registry,
-                             NetworkEquipmentDesign design) {
-        super();
-        this.registry = registry;
-        this.design = design;
+    public AbstractEquipment(String program , String name , UUID id) {
+        this.program = NameUtil.getStandardizedName(program);
         this.equipmentTypeName = NameUtil.getStandardizedName(name);
-        this.equipmentTypeId = this.registry.getEquipmentTypeID(this.equipmentTypeName);
+        this.equipmentTypeId = id;
 
         NetworkEquipmentRepository.addOccurrence( this.equipmentTypeId );
         this.uniqueName = this.equipmentTypeName + " - " + NetworkEquipmentRepository.getOccurrences(this.equipmentTypeId);
     }
 
-    private final String uniqueName;
-    private final UUID equipmentTypeId;
-    private final String equipmentTypeName;
-    private final Map<UUID, List<Equipment>> children = new HashMap<>();
-    private final Multiset<UUID> quantityOfChildren = HashMultiset.create();
-
+    @Override
     public boolean isFull(UUID equipmentType) {
-        return !canAddEquipment(equipmentType);
+        return isNone() || !canAddEquipment(equipmentType);
     }
 
+    @Override
     public boolean canAddEquipment(UUID equipmentType) {
         return canAddEquipment(equipmentType , 1);
     }
 
+    @Override
     public boolean canAddEquipment(Equipment equipment) {
         return canAddEquipment(equipment , 1);
     }
 
+    @Override
     public boolean canAddEquipment(Equipment equipment , int quantity) {
         return canAddEquipment(equipment.getEquipmentTypeId() , quantity);
     }
 
-
+    @Override
     public boolean addEquipment(String name) {
         return addEquipment( name , 1 );
     }
 
+    @Override
     public boolean addEquipment(String name , int quantity) {
         return addEquipment(
-                this.registry.getEquipmentTypeID(name),
+                NetworkRegistryFactory.getNetworkEquipmentRegistry(this.program).getEquipmentTypeID(name),
                 quantity
         );
     }
 
-
+    @Override
     public boolean canAddEquipment(UUID equipmentTypeId , int quantity) {
-        return (getQuantityOfChild(equipmentTypeId) + quantity) <= this.design.getMaxQuantityOfChild(this.getEquipmentTypeId() , equipmentTypeId);
+        int newProposedQuantity = getQuantityOfChild(equipmentTypeId) + quantity;
+        int max = NetworkDesignFactory
+                .getNetworkEquipmentDesign(this.program)
+                .getMaxQuantityOfChild(this.getEquipmentTypeId() , equipmentTypeId);
+        return !isNone() || (newProposedQuantity <= max);
     }
 
+    @Override
     public boolean addEquipment(Equipment equipment) {
         boolean result = false;
         if (!equipment.isNone() && canAddEquipment(equipment)) {
@@ -86,48 +88,43 @@ public abstract class AbstractEquipment implements Equipment {
         return result;
     }
 
+    @Override
     public boolean addEquipment(UUID equipmentTypeId) {
         return addEquipment( equipmentTypeId , 1);
     }
 
+    @Override
     public boolean addEquipment(UUID equipmentTypeId , int quantity) {
         boolean result = false;
         if ( equipmentTypeId != NetworkEquipment.NONE.getEquipmentTypeId() && canAddEquipment(equipmentTypeId , quantity) ) {
             for (int i = 0 ; i < quantity ; i++) {
-                addChildEquipment( this.registry.getEquipmentInstance(equipmentTypeId) );
+                addChildEquipment( equipmentTypeId );
             }
             result = true;
         }
         return result;
     }
 
+    @Override
     public int getQuantityOfChild(UUID equipmentTypeId) {
         return getQuantityOfChildren().count(equipmentTypeId);
     }
 
-    public int getQuantityOfChild(String name) {
-        return getQuantityOfChild( this.registry.getEquipmentTypeID(name) );
-    }
-
-    public long getNumberOfParentTypes() {
-        return getParentTypes() != null ? getParentTypes().size() : 0;
-    }
-
-    public long getNumberOfChildrenTypes() {
-        return getChildrenTypes() != null ? getChildrenTypes().size() : 0;
-    }
-
-
-    private void addChildEquipment(Equipment child) {
-        List<Equipment> list = getChildren().getOrDefault(child.getEquipmentTypeId() , new ArrayList<>());
-        list.add( child );
-        getChildren().put(child.getEquipmentTypeId() , list);
-        getQuantityOfChildren().add(child.getEquipmentTypeId());
-    }
-
     @Override
-    public Map<UUID, List<Equipment>> getChildren() {
-        return this.children;
+    public int getQuantityOfChild(String name) {
+        return getQuantityOfChild( NetworkRegistryFactory.getNetworkEquipmentRegistry(this.program).getEquipmentTypeID(name) );
+    }
+
+    private void addChildEquipment(Equipment equipment) {
+        addChildEquipment( equipment.getEquipmentTypeId() );
+    }
+
+    private void addChildEquipment(UUID id) {
+        getQuantityOfChildren().add(id);
+
+        this.equipmentNameToCount.put(
+                NetworkRegistryFactory.getNetworkEquipmentRegistry(this.program).getEquipmentTypeName(id),
+                getQuantityOfChildren().count(id));
     }
 
     @Override
