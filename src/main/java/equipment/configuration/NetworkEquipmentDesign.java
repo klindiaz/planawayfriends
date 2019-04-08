@@ -10,41 +10,47 @@ import org.jgrapht.graph.DefaultDirectedGraph;
 import java.util.*;
 
 public class NetworkEquipmentDesign {
-    private static final Map<UUID,List<UUID>> equipmentParents = new HashMap<>();
-    private static final Map<UUID,List<UUID>> equipmentChildren = new HashMap<>();
-    private static final Map<UUID,Map<UUID,Integer>> childrenLimits = new HashMap<>();   // < parentUUID , < childUUID , max > >
-    private static final DirectedGraph<UUID, EquipmentEdge> graph = new DefaultDirectedGraph<>(EquipmentEdge.class);
-    private static final DijkstraShortestPath<UUID,EquipmentEdge> path = new DijkstraShortestPath<>(graph);
+
+    public NetworkEquipmentDesign(NetworkEquipmentRegistry registry) {
+        this.registry = registry;
+    }
+
+    private final NetworkEquipmentRegistry registry;
+    private final Map<UUID,List<UUID>> equipmentParents = new HashMap<>();
+    private final Map<UUID,List<UUID>> equipmentChildren = new HashMap<>();
+    private final Map<UUID,Map<UUID,Integer>> childrenLimits = new HashMap<>();   // < parentUUID , < childUUID , max > >
+    private final DirectedGraph<UUID, EquipmentEdge> graph = new DefaultDirectedGraph<>(EquipmentEdge.class);
+    private final DijkstraShortestPath<UUID,EquipmentEdge> path = new DijkstraShortestPath<>(graph);
 
 
-    public static List<UUID> getParentTypes(UUID equipmentTypeId) {
+    public List<UUID> getParentTypes(UUID equipmentTypeId) {
         return equipmentParents.getOrDefault(equipmentTypeId , Collections.singletonList(NetworkEquipment.NONE.getEquipmentTypeId()));
     }
 
-    public static List<UUID> getChildrenTypes(UUID equipmentTypeId) {
+    public List<UUID> getChildrenTypes(UUID equipmentTypeId) {
         return equipmentChildren.getOrDefault(equipmentTypeId , Collections.singletonList(NetworkEquipment.NONE.getEquipmentTypeId()));
     }
 
-    public static Map<UUID, Integer> getChildrenLimits(UUID equipmentTypeId) {
+    public Map<UUID, Integer> getChildrenLimits(UUID equipmentTypeId) {
         return childrenLimits.getOrDefault(equipmentTypeId , Collections.singletonMap(NetworkEquipment.NONE.getEquipmentTypeId() , 0));
     }
 
-    public static int getMaxQuantityOfChild(UUID origin , UUID child) {
+    public int getMaxQuantityOfChild(UUID origin , UUID child) {
         return path.getPath(origin,child).getEdgeList().stream().map(EquipmentEdge::getValue).reduce(Math::multiplyExact).orElse(0);
     }
 
-    public static void addParentEquipmentType(UUID origin , UUID parent) {
+    public void addParentEquipmentType(UUID origin , UUID parent) {
         addEquipmentTypeToHierarchy(origin , parent , equipmentParents);
     }
 
-    public static void addChildEquipment(UUID origin , UUID child , int maxNumberOfChildrenForParent) {
+    public void addChildEquipment(UUID origin , UUID child , int maxNumberOfChildrenForParent) {
         addEquipmentTypeToHierarchy(origin , child , equipmentChildren);
         childrenLimits.put(origin , ImmutableMap.of( child , maxNumberOfChildrenForParent) );
 
         graph.addEdge(origin,child, new EquipmentEdge(origin , child , maxNumberOfChildrenForParent));
     }
 
-    private static void addEquipmentTypeToHierarchy(UUID origin , UUID destination , Map<UUID,List<UUID>> container) {
+    private void addEquipmentTypeToHierarchy(UUID origin , UUID destination , Map<UUID,List<UUID>> container) {
         List<UUID> subContainer = !CollectionUtils.isEmpty(container.get(origin)) ? container.get(origin) : new ArrayList<>();
 
         subContainer.add(destination);
@@ -54,7 +60,7 @@ public class NetworkEquipmentDesign {
         graph.addVertex(destination);
     }
 
-    private static final class EquipmentEdge {
+    private final class EquipmentEdge {
         final UUID origin;
         final UUID destination;
         final Integer value;
@@ -88,8 +94,8 @@ public class NetworkEquipmentDesign {
         public String toString() {
             return String.format(
                     "%s:%s - 1:%s",
-                    NetworkEquipmentRegistry.getEquipmentTypeName(this.origin),
-                    NetworkEquipmentRegistry.getEquipmentTypeName(this.destination),
+                    registry.getEquipmentTypeName(this.origin),
+                    registry.getEquipmentTypeName(this.destination),
                     this.value
             );
         }

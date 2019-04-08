@@ -4,6 +4,7 @@ import equipment.AbstractEquipment;
 import equipment.Equipment;
 import equipment.configuration.NetworkEquipmentDesign;
 import equipment.configuration.NetworkEquipmentRegistry;
+import equipment.configuration.factory.NetworkRegistryFactory;
 
 import java.util.Map;
 import java.util.Objects;
@@ -18,8 +19,10 @@ public class NetworkEquipment extends AbstractEquipment {
         super();
     }
 
-    public NetworkEquipment(String name) {
-        super(name);
+    public NetworkEquipment(String name ,
+                            NetworkEquipmentRegistry registry,
+                            NetworkEquipmentDesign design) {
+        super(name , registry , design);
     }
 
     @Override
@@ -29,32 +32,32 @@ public class NetworkEquipment extends AbstractEquipment {
 
     @Override
     public Map<UUID,String> getParentTypes() {
-        return NetworkEquipmentDesign
+        return this.design
                         .getParentTypes(this.getEquipmentTypeId())
                         .stream()
                         .collect(
-                                Collectors.toMap(Function.identity() , NetworkEquipmentRegistry::getEquipmentTypeName)
+                                Collectors.toMap(Function.identity() , this.registry::getEquipmentTypeName)
                         );
     }
 
     @Override
     public Map<UUID,String> getChildrenTypes() {
-        return NetworkEquipmentDesign
+        return this.design
                         .getChildrenTypes(this.getEquipmentTypeId())
                         .stream()
                         .collect(
-                                Collectors.toMap(Function.identity() , NetworkEquipmentRegistry::getEquipmentTypeName)
+                                Collectors.toMap(Function.identity() , this.registry::getEquipmentTypeName)
                         );
     }
 
     @Override
     public Map<UUID, Integer> getChildrenLimits() {
-        return NetworkEquipmentDesign.getChildrenLimits(this.getEquipmentTypeId());
+        return this.design.getChildrenLimits(this.getEquipmentTypeId());
     }
 
     @Override
     public Integer getChildLimit(Equipment equipment) {
-        return NetworkEquipmentDesign.getMaxQuantityOfChild(this.getEquipmentTypeId() , equipment.getEquipmentTypeId());
+        return this.design.getMaxQuantityOfChild(this.getEquipmentTypeId() , equipment.getEquipmentTypeId());
     }
 
     @Override

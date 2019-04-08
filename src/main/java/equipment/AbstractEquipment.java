@@ -4,25 +4,35 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 import equipment.configuration.NetworkEquipmentDesign;
 import equipment.configuration.NetworkEquipmentRegistry;
+import equipment.configuration.factory.NetworkDesignFactory;
+import equipment.configuration.factory.NetworkRegistryFactory;
 import equipment.implementation.NetworkEquipment;
 import equipment.repository.NetworkEquipmentRepository;
-import utility.EquipmentNameUtil;
+import utility.NameUtil;
 
 import java.util.*;
 
 public abstract class AbstractEquipment implements Equipment {
+    protected final NetworkEquipmentRegistry registry;
+    protected final NetworkEquipmentDesign design;
 
     public AbstractEquipment() {
         super();
         this.uniqueName = "NONE";
         this.equipmentTypeName = "NULL OBJECT PATTERN";
         this.equipmentTypeId = UUID.randomUUID();
+        this.registry = NetworkRegistryFactory.createNetworkEquipmentRegistry(UUID.randomUUID().toString());
+        this.design = NetworkDesignFactory.createNetworkEquipmentDesign(UUID.randomUUID().toString());
     }
 
-    public AbstractEquipment(String name) {
+    public AbstractEquipment(String name ,
+                             NetworkEquipmentRegistry registry,
+                             NetworkEquipmentDesign design) {
         super();
-        this.equipmentTypeName = EquipmentNameUtil.getStandardizedName(name);
-        this.equipmentTypeId = NetworkEquipmentRegistry.getEquipmentTypeID(this.equipmentTypeName);
+        this.registry = registry;
+        this.design = design;
+        this.equipmentTypeName = NameUtil.getStandardizedName(name);
+        this.equipmentTypeId = this.registry.getEquipmentTypeID(this.equipmentTypeName);
 
         NetworkEquipmentRepository.addOccurrence( this.equipmentTypeId );
         this.uniqueName = this.equipmentTypeName + " - " + NetworkEquipmentRepository.getOccurrences(this.equipmentTypeId);
@@ -57,14 +67,14 @@ public abstract class AbstractEquipment implements Equipment {
 
     public boolean addEquipment(String name , int quantity) {
         return addEquipment(
-                NetworkEquipmentRegistry.getEquipmentTypeID(name),
+                this.registry.getEquipmentTypeID(name),
                 quantity
         );
     }
 
 
     public boolean canAddEquipment(UUID equipmentTypeId , int quantity) {
-        return (getQuantityOfChild(equipmentTypeId) + quantity) <= NetworkEquipmentDesign.getMaxQuantityOfChild(this.getEquipmentTypeId() , equipmentTypeId);
+        return (getQuantityOfChild(equipmentTypeId) + quantity) <= this.design.getMaxQuantityOfChild(this.getEquipmentTypeId() , equipmentTypeId);
     }
 
     public boolean addEquipment(Equipment equipment) {
@@ -84,7 +94,7 @@ public abstract class AbstractEquipment implements Equipment {
         boolean result = false;
         if ( equipmentTypeId != NetworkEquipment.NONE.getEquipmentTypeId() && canAddEquipment(equipmentTypeId , quantity) ) {
             for (int i = 0 ; i < quantity ; i++) {
-                addChildEquipment( NetworkEquipmentRegistry.getEquipmentInstance(equipmentTypeId) );
+                addChildEquipment( this.registry.getEquipmentInstance(equipmentTypeId) );
             }
             result = true;
         }
@@ -96,7 +106,7 @@ public abstract class AbstractEquipment implements Equipment {
     }
 
     public int getQuantityOfChild(String name) {
-        return getQuantityOfChild( NetworkEquipmentRegistry.getEquipmentTypeID(name) );
+        return getQuantityOfChild( this.registry.getEquipmentTypeID(name) );
     }
 
     public long getNumberOfParentTypes() {
