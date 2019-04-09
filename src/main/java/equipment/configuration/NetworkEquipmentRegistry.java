@@ -11,12 +11,12 @@ import java.util.*;
 public final class NetworkEquipmentRegistry {
     public static final List<EquipmentDetails> universalEquipmentDetails = new ArrayList<>();
 
+    public final String program;
+    private final BiMap<UUID,String> equipmentTypeIdToName = HashBiMap.create();
+
     NetworkEquipmentRegistry(String program) {
         this.program = program;
     }
-
-    public final String program;
-    private final BiMap<UUID,String> equipmentTypeIdToName = HashBiMap.create();
 
     public void addEquipmentToRegistry(String name) {
         String standardizedName = NameUtil.getStandardizedName(name);

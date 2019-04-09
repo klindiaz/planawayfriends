@@ -4,25 +4,24 @@ import com.google.common.collect.ImmutableMap;
 import equipment.implementation.NetworkEquipment;
 import org.apache.commons.collections4.CollectionUtils;
 import org.jgrapht.DirectedGraph;
+import org.jgrapht.alg.interfaces.ShortestPathAlgorithm;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.graph.DefaultDirectedGraph;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class NetworkEquipmentDesign {
-
-    NetworkEquipmentDesign(String program) {
-        this.program = program;
-    }
 
     private final String program;
     private final Map<UUID,List<UUID>> equipmentParents = new HashMap<>();
     private final Map<UUID,List<UUID>> equipmentChildren = new HashMap<>();
     private final Map<UUID,Map<UUID,Integer>> childrenLimits = new HashMap<>();   // < parentUUID , < childUUID , max > >
     private final DirectedGraph<UUID, EquipmentEdge> graph = new DefaultDirectedGraph<>(EquipmentEdge.class);
-    private final DijkstraShortestPath<UUID,EquipmentEdge> path = new DijkstraShortestPath<>(graph);
+    private final ShortestPathAlgorithm<UUID,EquipmentEdge> path = new DijkstraShortestPath<>(graph);
 
+    NetworkEquipmentDesign(String program) {
+        this.program = program;
+    }
 
     public List<UUID> getParentTypes(UUID equipmentTypeId) {
         return equipmentParents.getOrDefault(equipmentTypeId , Collections.singletonList(NetworkEquipment.NONE.getEquipmentTypeId()));
@@ -40,22 +39,23 @@ public class NetworkEquipmentDesign {
         return path.getPath(origin,child).getEdgeList().stream().map(EquipmentEdge::getValue).reduce(Math::multiplyExact).orElse(0);
     }
 
-
-    public List<EquipmentEdge> getEdgeList(UUID rootId , UUID leafNodeID) {
-        return new ArrayList<>(
-                            this.path
-                                .getPath(rootId,leafNodeID)
-                                .getEdgeList()
-                    );
-    }
-
-    public Map<UUID,Integer> getDesignMultipliers(UUID rootId , UUID leafNodeID) {
+    public Map<UUID,Integer> getBottomUpSpec(UUID rootId , UUID leafNodeID) {
         Map<UUID,Integer> result = new LinkedHashMap<>();
 
         List<EquipmentEdge> edges = getEdgeList(rootId,leafNodeID);
         for (int i = edges.size() - 1 ; i >= 0 ; i--) {
             EquipmentEdge edge = edges.get(i);
             result.put(edge.origin , edge.value);
+        }
+        return result;
+    }
+
+    public Map<UUID,Integer> getTopDownSpec(UUID rootId , UUID leafNodeID) {
+        Map<UUID,Integer> result = new LinkedHashMap<>();
+
+        List<EquipmentEdge> edges = getEdgeList(rootId,leafNodeID);
+        for (EquipmentEdge edge : edges) {
+            result.put(edge.origin, edge.value);
         }
         return result;
     }
@@ -69,6 +69,14 @@ public class NetworkEquipmentDesign {
         childrenLimits.put(origin , ImmutableMap.of( child , maxNumberOfChildrenForParent) );
 
         graph.addEdge(origin,child, new EquipmentEdge(origin , child , maxNumberOfChildrenForParent));
+    }
+
+    private List<EquipmentEdge> getEdgeList(UUID rootId , UUID leafNodeID) {
+        return new ArrayList<>(
+                this.path
+                        .getPath(rootId,leafNodeID)
+                        .getEdgeList()
+        );
     }
 
     private void addEquipmentTypeToHierarchy(UUID origin , UUID destination , Map<UUID,List<UUID>> container) {

@@ -12,8 +12,17 @@ public class NetworkEquipment extends AbstractEquipment {
         super();
     }
 
-    public NetworkEquipment(String program , String name , UUID id) {
+    private NetworkEquipment(NetworkEquipment equipment) {
+        super(equipment);
+    }
+
+    NetworkEquipment(String program , String name , UUID id) {
         super(program , name , id);
+    }
+
+    @Override
+    public NetworkEquipment getClone() {
+        return new NetworkEquipment(this);
     }
 
     @Override

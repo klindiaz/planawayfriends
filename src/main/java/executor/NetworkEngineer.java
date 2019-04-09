@@ -1,25 +1,32 @@
 package executor;
 
 import equipment.Equipment;
-import equipment.configuration.*;
+import equipment.configuration.NetworkDesignFactory;
+import equipment.configuration.NetworkEquipmentDesign;
+import equipment.configuration.NetworkEquipmentRegistry;
+import equipment.configuration.NetworkRegistryFactory;
+import equipment.implementation.NetworkEquipment;
+import equipment.implementation.NetworkEquipmentFactory;
+import exception.ExceedsEquipmentLimit;
+import utility.ErrorsUtil;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class NetworkEngineer {
 
+    private final String program;
+    private final NetworkEquipmentRegistry registry;
+    private final NetworkEquipmentDesign design;
+
     NetworkEngineer(final String program) {
         this.program = program;
         this.registry = NetworkRegistryFactory.createNetworkEquipmentRegistry(program);
         this.design = NetworkDesignFactory.createNetworkEquipmentDesign(program);
     }
-
-    private final String program;
-    private final NetworkEquipmentRegistry registry;
-    private final NetworkEquipmentDesign design;
 
     public List<Equipment> build(String rootName , String nthChildName , int numberOfChildren) {
         return build(rootName , nthChildName , numberOfChildren , new ArrayList<>());
@@ -37,38 +44,46 @@ public class NetworkEngineer {
     }
 
     public List<Equipment> build(final UUID rootID , final UUID nthChildID , final int numberOfChildren , final List<Equipment> inputEquipmentList) {
-        List<Equipment> equipmentList = new ArrayList<>(inputEquipmentList);
+        return build(rootID , nthChildID , numberOfChildren , inputEquipmentList , true);
+    }
+
+    public List<Equipment> build(
+                                    final UUID rootID ,
+                                    final UUID nthChildID ,
+                                    final int numberOfChildren ,
+                                    final List<Equipment> inputEquipmentList ,
+                                    final boolean canSeparateChildren
+                            ) throws ExceedsEquipmentLimit
+    {
+        List<Equipment> equipmentList = inputEquipmentList.stream().map(Equipment::getClone).collect(Collectors.toList());
 
         int maxNumberOfChildren = this.design.getMaxQuantityOfChild(rootID , nthChildID);
         int numberToAccountFor = numberOfChildren;
+        boolean exceedsMaximumAllowedInOneGroup = numberToAccountFor > maxNumberOfChildren;
+        if (exceedsMaximumAllowedInOneGroup && !canSeparateChildren) {
+            throw new ExceedsEquipmentLimit(
+                    ErrorsUtil.equipmentLimitationExceeded(this.registry.getEquipmentTypeName(rootID),this.registry.getEquipmentTypeName(nthChildID),numberOfChildren,maxNumberOfChildren)
+            );
+        }
         while (numberToAccountFor > 0) {
-            int accountFor = numberToAccountFor > maxNumberOfChildren ? maxNumberOfChildren : numberToAccountFor;
+            int accountFor = exceedsMaximumAllowedInOneGroup ? maxNumberOfChildren : numberToAccountFor;
             List<Equipment> candidates = equipmentList
                                             .stream()
                                             .filter( equipment -> equipment.getEquipmentTypeId() == rootID && equipment.canAddEquipment(nthChildID,accountFor) )
+                                            .sorted(Comparator.comparing(equipment -> equipment.getQuantityOfChild(nthChildID), Comparator.reverseOrder()))
                                             .collect(Collectors.toList());
             Equipment equipment;
-            if (candidates.isEmpty()) {
+            if ( !candidates.isEmpty() ) {
+                Equipment mostDenselyPopulatedCandidate = candidates.get(0);
+                mostDenselyPopulatedCandidate.addEquipment(nthChildID , accountFor);
+
+                numberToAccountFor -= accountFor;
+            } else {
                 equipment = NetworkEquipmentFactory.getEquipmentInstance(this.program,rootID);
                 equipmentList.add( equipment );
-                continue;
-            } else {
-                equipment = candidates.get(0);
-                equipment.addEquipment(nthChildID , accountFor);
             }
-            numberToAccountFor -= accountFor;
         }
         return equipmentList;
-    }
-
-    public String getProgram() {
-        return this.program;
-    }
-
-    private NetworkEngineer addEquipment(String equipmentTypeName) {
-        this.getProgramRegistry().addEquipmentToRegistry(equipmentTypeName);
-
-        return this;
     }
 
     public NetworkEngineer addEquipmentAndSpec(String rootName , String childName , int rootToChildRatio) {
@@ -90,4 +105,15 @@ public class NetworkEngineer {
     public NetworkEquipmentDesign getProgramDesign() {
         return this.design;
     }
+
+    public String getProgram() {
+        return this.program;
+    }
+
+    private NetworkEngineer addEquipment(String equipmentTypeName) {
+        this.getProgramRegistry().addEquipmentToRegistry(equipmentTypeName);
+
+        return this;
+    }
+
 }

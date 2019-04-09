@@ -8,6 +8,7 @@ import equipment.implementation.NetworkEquipment;
 import equipment.repository.NetworkEquipmentRepository;
 import utility.NameUtil;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -36,6 +37,16 @@ public abstract class AbstractEquipment implements Equipment {
         this.uniqueName = this.equipmentTypeName + " - " + NetworkEquipmentRepository.getOccurrences(this.equipmentTypeId);
     }
 
+    public AbstractEquipment(AbstractEquipment equipment) {
+        this.program = equipment.getProgram();
+        this.equipmentTypeName = equipment.getEquipmentTypeName();
+        this.equipmentTypeId = equipment.getEquipmentTypeId();
+        this.uniqueName = equipment.getUniqueName();
+
+        equipment.getQuantityOfChildren().forEachEntry( this.quantityOfChildren::add );
+        equipment.getEquipmentNameToCount().forEach( this.equipmentNameToCount::put );
+    }
+
     @Override
     public boolean isFull(UUID equipmentType) {
         return isNone() || !canAddEquipment(equipmentType);
@@ -57,6 +68,15 @@ public abstract class AbstractEquipment implements Equipment {
     }
 
     @Override
+    public boolean canAddEquipment(UUID equipmentTypeId , int quantity) {
+        int newProposedTotal = getQuantityOfChild(equipmentTypeId) + quantity;
+        int max = NetworkDesignFactory
+                            .getNetworkEquipmentDesign(this.program)
+                            .getMaxQuantityOfChild(this.getEquipmentTypeId() , equipmentTypeId);
+        return !isNone() && (newProposedTotal <= max);
+    }
+
+    @Override
     public boolean addEquipment(String name) {
         return addEquipment( name , 1 );
     }
@@ -67,15 +87,6 @@ public abstract class AbstractEquipment implements Equipment {
                 NetworkRegistryFactory.getNetworkEquipmentRegistry(this.program).getEquipmentTypeID(name),
                 quantity
         );
-    }
-
-    @Override
-    public boolean canAddEquipment(UUID equipmentTypeId , int quantity) {
-        int newProposedTotal = getQuantityOfChild(equipmentTypeId) + quantity;
-        int max = NetworkDesignFactory
-                            .getNetworkEquipmentDesign(this.program)
-                            .getMaxQuantityOfChild(this.getEquipmentTypeId() , equipmentTypeId);
-        return !isNone() && (newProposedTotal <= max);
     }
 
     @Override
@@ -115,21 +126,26 @@ public abstract class AbstractEquipment implements Equipment {
     private void addChildEquipment(UUID id) {
         addChildEquipment(id , 1);
     }
-    private void addChildEquipment(UUID id  , int quantity) {
+
+    private void addChildEquipment(UUID id  ,final int quantity) {
         addChildEquipmentHelper(id , quantity);
 
-        Map<UUID,Integer> equipmentRatios = NetworkDesignFactory
-                                                    .getNetworkEquipmentDesign(this.program)
-                                                    .getDesignMultipliers(this.equipmentTypeId,id);
+        Map<UUID,Integer> equipmentRatios = NetworkDesignFactory.getNetworkEquipmentDesign(this.program).getBottomUpSpec(this.equipmentTypeId,id);
+
+        Map<UUID,Integer> ratio = NetworkDesignFactory.getNetworkEquipmentDesign(this.program).getTopDownSpec(this.equipmentTypeId,id);
+
         UUID currentID;
-        Integer currentNumber = quantity;
-        Integer currentEdgeValue = 0;
+        int currentNumber = quantity;
+        int currentEdgeValue;
 
         for (Map.Entry<UUID,Integer> entry : equipmentRatios.entrySet()) {
             currentID = entry.getKey();
             currentEdgeValue = entry.getValue();
 
-            currentNumber = (int) Math.ceil( new Double(currentNumber) / new Double(currentEdgeValue) );
+            String name = NetworkRegistryFactory.getNetworkEquipmentRegistry(this.program).getEquipmentTypeName(currentID);
+            int numberOfCurrent = getQuantityOfChild(currentID);
+
+            currentNumber = (int) Math.ceil( (double) currentNumber / (double) currentEdgeValue );
             addChildEquipmentHelper(currentID , currentNumber);
         }
     }
@@ -142,8 +158,17 @@ public abstract class AbstractEquipment implements Equipment {
         getQuantityOfChildren().add(id,quantity);
 
         this.equipmentNameToCount.put(
-                NetworkRegistryFactory.getNetworkEquipmentRegistry(this.program).getEquipmentTypeName(id),
-                getQuantityOfChildren().count(id));
+                                        NetworkRegistryFactory.getNetworkEquipmentRegistry(this.program).getEquipmentTypeName(id),
+                                        getQuantityOfChildren().count(id)
+                                    );
+    }
+
+    public String getProgram() {
+        return program;
+    }
+
+    public Map<String, Integer> getEquipmentNameToCount() {
+        return Collections.unmodifiableMap(equipmentNameToCount);
     }
 
     @Override

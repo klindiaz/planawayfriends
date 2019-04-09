@@ -24,4 +24,6 @@ public interface Equipment {
     boolean addEquipment(Equipment equipment);
     boolean addEquipment(UUID equipmentTypeId);
     boolean addEquipment(UUID equipmentTypeId , int quantity);
+
+    Equipment getClone();
 }
