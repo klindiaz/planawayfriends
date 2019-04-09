@@ -4,6 +4,7 @@ import equipment.Equipment;
 import equipment.configuration.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -21,23 +22,31 @@ public class NetworkEngineer {
     private final NetworkEquipmentDesign design;
 
     public List<Equipment> build(String rootName , String nthChildName , int numberOfChildren) {
+        return build(rootName , nthChildName , numberOfChildren , new ArrayList<>());
+    }
+
+    public List<Equipment> build(String rootName , String nthChildName , int numberOfChildren , final List<Equipment> inputEquipmentList) {
         UUID rootID = this.registry.getEquipmentTypeID(rootName);
         UUID childID = this.registry.getEquipmentTypeID(nthChildName);
 
-        return build(rootID , childID , numberOfChildren);
+        return build(rootID , childID , numberOfChildren , inputEquipmentList);
     }
 
     public List<Equipment> build(final UUID rootID , final UUID nthChildID , final int numberOfChildren) {
-        List<Equipment> equipmentList = new ArrayList<>();
+        return build(rootID,nthChildID,numberOfChildren, new ArrayList<>());
+    }
+
+    public List<Equipment> build(final UUID rootID , final UUID nthChildID , final int numberOfChildren , final List<Equipment> inputEquipmentList) {
+        List<Equipment> equipmentList = new ArrayList<>(inputEquipmentList);
 
         int maxNumberOfChildren = this.design.getMaxQuantityOfChild(rootID , nthChildID);
         int numberToAccountFor = numberOfChildren;
         while (numberToAccountFor > 0) {
             int accountFor = numberToAccountFor > maxNumberOfChildren ? maxNumberOfChildren : numberToAccountFor;
             List<Equipment> candidates = equipmentList
-                                                .stream()
-                                                .filter( equipment ->  !equipment.isFull(nthChildID) && equipment.canAddEquipment(nthChildID,accountFor) )
-                                                .collect(Collectors.toList());
+                                            .stream()
+                                            .filter( equipment -> equipment.getEquipmentTypeId() == rootID && equipment.canAddEquipment(nthChildID,accountFor) )
+                                            .collect(Collectors.toList());
             Equipment equipment;
             if (candidates.isEmpty()) {
                 equipment = NetworkEquipmentFactory.getEquipmentInstance(this.program,rootID);

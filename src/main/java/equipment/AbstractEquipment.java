@@ -71,21 +71,16 @@ public abstract class AbstractEquipment implements Equipment {
 
     @Override
     public boolean canAddEquipment(UUID equipmentTypeId , int quantity) {
-        int newProposedQuantity = getQuantityOfChild(equipmentTypeId) + quantity;
+        int newProposedTotal = getQuantityOfChild(equipmentTypeId) + quantity;
         int max = NetworkDesignFactory
-                .getNetworkEquipmentDesign(this.program)
-                .getMaxQuantityOfChild(this.getEquipmentTypeId() , equipmentTypeId);
-        return !isNone() || (newProposedQuantity <= max);
+                            .getNetworkEquipmentDesign(this.program)
+                            .getMaxQuantityOfChild(this.getEquipmentTypeId() , equipmentTypeId);
+        return !isNone() && (newProposedTotal <= max);
     }
 
     @Override
     public boolean addEquipment(Equipment equipment) {
-        boolean result = false;
-        if (!equipment.isNone() && canAddEquipment(equipment)) {
-            addChildEquipment(equipment);
-            result = true;
-        }
-        return result;
+        return addEquipment(equipment.getEquipmentTypeId() , 1);
     }
 
     @Override
@@ -97,9 +92,7 @@ public abstract class AbstractEquipment implements Equipment {
     public boolean addEquipment(UUID equipmentTypeId , int quantity) {
         boolean result = false;
         if ( equipmentTypeId != NetworkEquipment.NONE.getEquipmentTypeId() && canAddEquipment(equipmentTypeId , quantity) ) {
-            for (int i = 0 ; i < quantity ; i++) {
-                addChildEquipment( equipmentTypeId );
-            }
+            addChildEquipment( equipmentTypeId , quantity );
             result = true;
         }
         return result;
@@ -116,11 +109,37 @@ public abstract class AbstractEquipment implements Equipment {
     }
 
     private void addChildEquipment(Equipment equipment) {
-        addChildEquipment( equipment.getEquipmentTypeId() );
+        addChildEquipment( equipment.getEquipmentTypeId() , 1);
     }
 
     private void addChildEquipment(UUID id) {
-        getQuantityOfChildren().add(id);
+        addChildEquipment(id , 1);
+    }
+    private void addChildEquipment(UUID id  , int quantity) {
+        addChildEquipmentHelper(id , quantity);
+
+        Map<UUID,Integer> equipmentRatios = NetworkDesignFactory
+                                                    .getNetworkEquipmentDesign(this.program)
+                                                    .getDesignMultipliers(this.equipmentTypeId,id);
+        UUID currentID;
+        Integer currentNumber = quantity;
+        Integer currentEdgeValue = 0;
+
+        for (Map.Entry<UUID,Integer> entry : equipmentRatios.entrySet()) {
+            currentID = entry.getKey();
+            currentEdgeValue = entry.getValue();
+
+            currentNumber = (int) Math.ceil( new Double(currentNumber) / new Double(currentEdgeValue) );
+            addChildEquipmentHelper(currentID , currentNumber);
+        }
+    }
+
+    private void addChildEquipmentHelper(UUID id) {
+        addChildEquipmentHelper(id , 1);
+    }
+
+    private void addChildEquipmentHelper(UUID id , int quantity) {
+        getQuantityOfChildren().add(id,quantity);
 
         this.equipmentNameToCount.put(
                 NetworkRegistryFactory.getNetworkEquipmentRegistry(this.program).getEquipmentTypeName(id),

@@ -10,7 +10,8 @@ public class EntryPoint {
         NetworkEquipmentInitializer.init();
 
         NetworkEngineer networkEngineer = EngineerFactory.getNetworkEngineer("ccap");
-        List<Equipment> equipmentList = networkEngineer.build("chassis","rpd",672);
+        List<Equipment> equipmentList1 = networkEngineer.build("chassis","rpd",671);
+        List<Equipment> equipmentList2 = networkEngineer.build("chassis","rpd",1 , equipmentList1);
 
         System.out.println("DONE");
     }

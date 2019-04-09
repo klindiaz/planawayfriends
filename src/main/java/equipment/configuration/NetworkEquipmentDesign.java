@@ -8,6 +8,7 @@ import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.graph.DefaultDirectedGraph;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class NetworkEquipmentDesign {
 
@@ -37,6 +38,26 @@ public class NetworkEquipmentDesign {
 
     public int getMaxQuantityOfChild(UUID origin , UUID child) {
         return path.getPath(origin,child).getEdgeList().stream().map(EquipmentEdge::getValue).reduce(Math::multiplyExact).orElse(0);
+    }
+
+
+    public List<EquipmentEdge> getEdgeList(UUID rootId , UUID leafNodeID) {
+        return new ArrayList<>(
+                            this.path
+                                .getPath(rootId,leafNodeID)
+                                .getEdgeList()
+                    );
+    }
+
+    public Map<UUID,Integer> getDesignMultipliers(UUID rootId , UUID leafNodeID) {
+        Map<UUID,Integer> result = new LinkedHashMap<>();
+
+        List<EquipmentEdge> edges = getEdgeList(rootId,leafNodeID);
+        for (int i = edges.size() - 1 ; i >= 0 ; i--) {
+            EquipmentEdge edge = edges.get(i);
+            result.put(edge.origin , edge.value);
+        }
+        return result;
     }
 
     public void addParentEquipmentType(UUID origin , UUID parent) {
@@ -73,6 +94,14 @@ public class NetworkEquipmentDesign {
 
         int getValue(){
             return this.value;
+        }
+
+        public UUID getOrigin() {
+            return origin;
+        }
+
+        public UUID getDestination() {
+            return destination;
         }
 
         @Override

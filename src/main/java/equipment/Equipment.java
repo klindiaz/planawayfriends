@@ -2,7 +2,6 @@ package equipment;
 
 import com.google.common.collect.Multiset;
 
-import java.util.Map;
 import java.util.UUID;
 
 public interface Equipment {
@@ -25,6 +24,4 @@ public interface Equipment {
     boolean addEquipment(Equipment equipment);
     boolean addEquipment(UUID equipmentTypeId);
     boolean addEquipment(UUID equipmentTypeId , int quantity);
-
-    Map<String,Integer> getAllEquipment();
 }
