@@ -5,7 +5,6 @@ import equipment.configuration.NetworkDesignFactory;
 import equipment.configuration.NetworkEquipmentDesign;
 import equipment.configuration.NetworkEquipmentRegistry;
 import equipment.configuration.NetworkRegistryFactory;
-import equipment.implementation.NetworkEquipment;
 import equipment.implementation.NetworkEquipmentFactory;
 import exception.ExceedsEquipmentLimit;
 import utility.ErrorsUtil;

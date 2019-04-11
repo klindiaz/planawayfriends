@@ -60,6 +60,12 @@ public class NetworkEquipmentDesign {
         return result;
     }
 
+    public int getAvailableEquipmentQuantity(UUID rootId , UUID leafId , int consumed) {
+        return getMaxQuantityOfChild(rootId , leafId) - consumed;
+    }
+
+
+
     public void addParentEquipmentType(UUID origin , UUID parent) {
         addEquipmentTypeToHierarchy(origin , parent , equipmentParents);
     }
