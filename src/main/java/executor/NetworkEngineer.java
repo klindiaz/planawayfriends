@@ -109,6 +109,10 @@ public class NetworkEngineer {
         return this.program;
     }
 
+    public Equipment getEquipmentInstance(final String equipmentTypeName) {
+        return NetworkEquipmentFactory.getEquipmentInstance(this.program , equipmentTypeName);
+    }
+
     private NetworkEngineer addEquipment(String equipmentTypeName) {
         this.getProgramRegistry().addEquipmentToRegistry(equipmentTypeName);
 

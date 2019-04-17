@@ -1,0 +1,5 @@
+chassis , line card , 7
+line card , port , 4
+port , nz dsg , 3
+nz dsg , rpd , 8
+rpa , rpd , 4

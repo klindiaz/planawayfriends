@@ -61,7 +61,8 @@ public class NetworkEquipmentDesign {
     }
 
     public int getAvailableEquipmentQuantity(UUID rootId , UUID leafId , int consumed) {
-        return getMaxQuantityOfChild(rootId , leafId) - consumed;
+        int max = rootId == leafId ? 1 : getMaxQuantityOfChild(rootId , leafId);
+        return max - consumed;
     }
 
 

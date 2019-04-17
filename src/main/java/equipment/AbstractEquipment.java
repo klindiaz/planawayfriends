@@ -9,10 +9,7 @@ import equipment.implementation.NetworkEquipment;
 import equipment.repository.NetworkEquipmentRepository;
 import utility.NameUtil;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public abstract class AbstractEquipment implements Equipment {
     private final String program;
@@ -44,7 +41,7 @@ public abstract class AbstractEquipment implements Equipment {
         this.equipmentTypeId = equipment.getEquipmentTypeId();
         this.uniqueName = equipment.getUniqueName();
 
-        equipment.getQuantityOfChildren().forEachEntry( this.quantityOfChildren::add );
+        equipment.getQuantityOfChildren().entrySet().forEach( entry ->  this.quantityOfChildren.add(entry.getElement(),entry.getCount()));
         equipment.getEquipmentNameToCount().forEach( this.equipmentNameToCount::put );
     }
 
@@ -132,66 +129,65 @@ public abstract class AbstractEquipment implements Equipment {
         boolean startingFromScratch = getQuantityOfChildren().size() == 0;
         Map<UUID,Integer> equipmentDesignAndMaximums = NetworkDesignFactory.getNetworkEquipmentDesign(this.program).getBottomUpSpec(this.equipmentTypeId,id);
 
-        if ( !startingFromScratch ) {
-            buildOnExisting( id , quantity );
-        } else {
-            buildBrandNew( equipmentDesignAndMaximums , id , quantity );
-        }
+        Multiset<UUID> resourcesToAdd = !startingFromScratch ?
+                                                buildOnExisting(equipmentDesignAndMaximums , id , quantity) :
+                                                buildBrandNew(equipmentDesignAndMaximums , id , quantity);
+        resourcesToAdd.entrySet().forEach(entry -> addChildEquipmentHelper(entry.getElement(),entry.getCount()));
     }
 
-    private void buildOnExisting(final UUID leafID , final int quantity) {
-        UUID currentID;
-        int currentNumber = quantity;
-        int currentEdgeValue;
+    private Multiset<UUID> buildOnExisting(final Map<UUID,Integer> bottomUpApproach , final UUID leafID , final int quantity) {
+        Multiset<UUID> resourcesToAdd = HashMultiset.create();
+        NetworkEquipmentDesign design = NetworkDesignFactory.getNetworkEquipmentDesign(this.program);
 
         Multiset<UUID> availableResources = HashMultiset.create();
-
-        NetworkEquipmentDesign design = NetworkDesignFactory.getNetworkEquipmentDesign(this.program);
-        Map<UUID,Integer> equipmentDesignAndMaximums = design.getBottomUpSpec(this.equipmentTypeId,leafID);
-
-        for (Map.Entry<UUID,Integer> entry : equipmentDesignAndMaximums.entrySet()) {
-            availableResources.add( entry.getKey() , design.getAvailableEquipmentQuantity(this.equipmentTypeId , entry.getKey() , getQuantityOfChild(entry.getKey())) );
-
-            if ( availableResources.count(entry.getKey()) > 0 ) {
-                System.out.println("HERE");
-            }
+        for (Map.Entry<UUID,Integer> entry : bottomUpApproach.entrySet()) {
+            availableResources.add(
+                    entry.getKey(),
+                    design.getAvailableEquipmentQuantity(this.equipmentTypeId , entry.getKey() , getQuantityOfChild(entry.getKey()))
+            );
         }
+//        List<UUID> path = new LinkedList<>(bottomUpApproach.keySet());
 
-        /*
-            If Chassis already exists
-
-            how many ports are there
-            how many ports available on linecards
-            add ports to available
-            how many line cards do I need to add to support the remainder
-            how many line cards are there on chassis
-            how many line cards available on chassis
-            add line cards to available
-         */
-
-
-        /*
-            Get Entire path
-            How many of each do we have available
-         */
-
-
-
-    }
-
-    private void buildBrandNew(Map<UUID,Integer> bottomUpApproach , UUID leafID , final int quantity) {
+        UUID childID = leafID;
         UUID parentID;
-        int quantityOfCurrentNode = quantity;
-        int multiplicityOfChildToParent;
-
         for (Map.Entry<UUID,Integer> entry : bottomUpApproach.entrySet()) {
             parentID = entry.getKey();
-            multiplicityOfChildToParent = entry.getValue();
+            int maxNumberOfChildrenInParent = entry.getValue();
 
-            quantityOfCurrentNode = (int) Math.ceil( (double) quantityOfCurrentNode / (double) multiplicityOfChildToParent );
-            addChildEquipmentHelper(parentID , quantityOfCurrentNode);
+            int quantityOfParent = getQuantityOfChild(parentID);
+            int numberOfChildrenThatCanFitInParents = (quantityOfParent * maxNumberOfChildrenInParent) - getQuantityOfChild(childID);
+
+            if ( quantity <= numberOfChildrenThatCanFitInParents ) {
+                resourcesToAdd.add( childID , quantity );
+                break;
+            } else {
+                int amountRemaining = quantity - numberOfChildrenThatCanFitInParents;
+                int newParentsNeeded = (int) Math.ceil((double) amountRemaining / (double) maxNumberOfChildrenInParent);
+                resourcesToAdd.add( parentID , newParentsNeeded );
+                resourcesToAdd.add( childID , quantity);
+
+                childID = parentID;
+            }
         }
-        addChildEquipmentHelper(leafID , quantity);
+        return resourcesToAdd;
+    }
+
+    private static Multiset<UUID> buildBrandNew(Map<UUID,Integer> bottomUpApproach , UUID leafID , final int quantity) {
+        Multiset<UUID> resourcesToAdd = HashMultiset.create();
+
+        UUID parentID;
+        int quantityOfCurrentNode = quantity;
+        int maxNumberOfChildrenInParent;
+
+        resourcesToAdd.add(leafID , quantity);
+        for (Map.Entry<UUID,Integer> entry : bottomUpApproach.entrySet()) {
+            parentID = entry.getKey();
+            maxNumberOfChildrenInParent = entry.getValue();
+
+            quantityOfCurrentNode = (int) Math.ceil( (double) quantityOfCurrentNode / (double) maxNumberOfChildrenInParent );
+            resourcesToAdd.add(parentID , quantityOfCurrentNode);
+        }
+        return resourcesToAdd;
     }
 
     private void addChildEquipmentHelper(UUID id) {
