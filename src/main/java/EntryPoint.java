@@ -11,12 +11,12 @@ public class EntryPoint {
         NetworkEquipmentInitializer.init();
 
         NetworkEngineer networkEngineer = EngineerFactory.getNetworkEngineer("ccap");
-        Equipment equipment = networkEngineer.getEquipmentInstance("chassis");
+//        Equipment equipment = networkEngineer.getEquipmentInstance("chassis");
 
-//        List<Equipment> equipmentList0 = networkEngineer.build("chassis","rpd",17);
-        List<Equipment> equipmentList2 = networkEngineer.build("chassis","rpd",10 ,
-                networkEngineer.build("chassis","rpd",7)
-                );
+        List<Equipment> equipmentList0 = networkEngineer.build("chassis","rpd",723);
+//        List<Equipment> equipmentList2 = networkEngineer.build("chassis","rpd",10 ,
+//                networkEngineer.build("chassis","rpd",723)
+//                );
 
         System.out.println("DONE");
     }

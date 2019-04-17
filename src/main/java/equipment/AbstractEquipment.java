@@ -146,10 +146,10 @@ public abstract class AbstractEquipment implements Equipment {
                     design.getAvailableEquipmentQuantity(this.equipmentTypeId , entry.getKey() , getQuantityOfChild(entry.getKey()))
             );
         }
-//        List<UUID> path = new LinkedList<>(bottomUpApproach.keySet());
 
-        UUID childID = leafID;
         UUID parentID;
+        UUID childID = leafID;
+        int currentQuantity = quantity;
         for (Map.Entry<UUID,Integer> entry : bottomUpApproach.entrySet()) {
             parentID = entry.getKey();
             int maxNumberOfChildrenInParent = entry.getValue();
@@ -157,15 +157,14 @@ public abstract class AbstractEquipment implements Equipment {
             int quantityOfParent = getQuantityOfChild(parentID);
             int numberOfChildrenThatCanFitInParents = (quantityOfParent * maxNumberOfChildrenInParent) - getQuantityOfChild(childID);
 
-            if ( quantity <= numberOfChildrenThatCanFitInParents ) {
-                resourcesToAdd.add( childID , quantity );
+            if ( currentQuantity <= numberOfChildrenThatCanFitInParents ) {
+                resourcesToAdd.add( childID , currentQuantity );
                 break;
             } else {
-                int amountRemaining = quantity - numberOfChildrenThatCanFitInParents;
+                int amountRemaining = currentQuantity - numberOfChildrenThatCanFitInParents;
                 int newParentsNeeded = (int) Math.ceil((double) amountRemaining / (double) maxNumberOfChildrenInParent);
-                resourcesToAdd.add( parentID , newParentsNeeded );
-                resourcesToAdd.add( childID , quantity);
-
+                resourcesToAdd.add( childID , currentQuantity);
+                currentQuantity = newParentsNeeded;
                 childID = parentID;
             }
         }

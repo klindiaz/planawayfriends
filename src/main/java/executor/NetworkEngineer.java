@@ -58,14 +58,13 @@ public class NetworkEngineer {
 
         int maxNumberOfChildren = this.design.getMaxQuantityOfChild(rootID , nthChildID);
         int numberToAccountFor = numberOfChildren;
-        boolean exceedsMaximumAllowedInOneGroup = numberToAccountFor > maxNumberOfChildren;
-        if (exceedsMaximumAllowedInOneGroup && !canSeparateChildren) {
+        if ((numberToAccountFor > maxNumberOfChildren) && !canSeparateChildren) {
             throw new ExceedsEquipmentLimit(
                     ErrorsUtil.equipmentLimitationExceeded(this.registry.getEquipmentTypeName(rootID),this.registry.getEquipmentTypeName(nthChildID),numberOfChildren,maxNumberOfChildren)
             );
         }
         while (numberToAccountFor > 0) {
-            int accountFor = exceedsMaximumAllowedInOneGroup ? maxNumberOfChildren : numberToAccountFor;
+            int accountFor = numberToAccountFor > maxNumberOfChildren ? maxNumberOfChildren : numberToAccountFor;
             List<Equipment> candidates = equipmentList
                                             .stream()
                                             .filter( equipment -> equipment.getEquipmentTypeId() == rootID && equipment.canAddEquipment(nthChildID,accountFor) )
