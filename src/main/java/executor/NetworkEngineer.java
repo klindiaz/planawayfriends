@@ -38,12 +38,19 @@ public class NetworkEngineer {
         return build(rootID , childID , numberOfChildren , inputEquipmentList);
     }
 
+    public List<Equipment> build(String rootName , String nthChildName , int numberOfChildren , final List<Equipment> inputEquipmentList, boolean canSeparateChildren) {
+        UUID rootID = this.registry.getEquipmentTypeID(rootName);
+        UUID childID = this.registry.getEquipmentTypeID(nthChildName);
+
+        return build(rootID , childID , numberOfChildren , inputEquipmentList , canSeparateChildren);
+    }
+
     public List<Equipment> build(final UUID rootID , final UUID nthChildID , final int numberOfChildren) {
         return build(rootID,nthChildID,numberOfChildren, new ArrayList<>());
     }
 
     public List<Equipment> build(final UUID rootID , final UUID nthChildID , final int numberOfChildren , final List<Equipment> inputEquipmentList) {
-        return build(rootID , nthChildID , numberOfChildren , inputEquipmentList , true);
+        return build(rootID , nthChildID , numberOfChildren , inputEquipmentList , false);
     }
 
     public List<Equipment> build(

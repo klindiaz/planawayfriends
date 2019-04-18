@@ -1,0 +1,4 @@
+litter box , cat ,  2
+room , litter box , 3
+house , room , 5
+subdivision , house  , 15

@@ -125,46 +125,37 @@ public abstract class AbstractEquipment implements Equipment {
         addChildEquipment(id , 1);
     }
 
-    private void addChildEquipment(UUID id  ,final int quantity) {
+    private void addChildEquipment(UUID idOfChildToAdd  ,final int quantity) {
         boolean startingFromScratch = getQuantityOfChildren().size() == 0;
-        Map<UUID,Integer> equipmentDesignAndMaximums = NetworkDesignFactory.getNetworkEquipmentDesign(this.program).getBottomUpSpec(this.equipmentTypeId,id);
+        Map<UUID,Integer> equipmentDesignAndMaximums = NetworkDesignFactory.getNetworkEquipmentDesign(this.program).getBottomUpSpec(this.equipmentTypeId,idOfChildToAdd);
 
+        //At This Point, we know that the equipment fits and it is a matter of stacking the equipment
         Multiset<UUID> resourcesToAdd = !startingFromScratch ?
-                                                buildOnExisting(equipmentDesignAndMaximums , id , quantity) :
-                                                buildBrandNew(equipmentDesignAndMaximums , id , quantity);
+                                                buildOnExisting(equipmentDesignAndMaximums , idOfChildToAdd , quantity) :
+                                                buildBrandNew(equipmentDesignAndMaximums , idOfChildToAdd , quantity);
         resourcesToAdd.entrySet().forEach(entry -> addChildEquipmentHelper(entry.getElement(),entry.getCount()));
     }
 
     private Multiset<UUID> buildOnExisting(final Map<UUID,Integer> bottomUpApproach , final UUID leafID , final int quantity) {
         Multiset<UUID> resourcesToAdd = HashMultiset.create();
-        NetworkEquipmentDesign design = NetworkDesignFactory.getNetworkEquipmentDesign(this.program);
-
-        Multiset<UUID> availableResources = HashMultiset.create();
-        for (Map.Entry<UUID,Integer> entry : bottomUpApproach.entrySet()) {
-            availableResources.add(
-                    entry.getKey(),
-                    design.getAvailableEquipmentQuantity(this.equipmentTypeId , entry.getKey() , getQuantityOfChild(entry.getKey()))
-            );
-        }
 
         UUID parentID;
         UUID childID = leafID;
-        int currentQuantity = quantity;
+        int quantityOfCurrentNode = quantity;
         for (Map.Entry<UUID,Integer> entry : bottomUpApproach.entrySet()) {
             parentID = entry.getKey();
             int maxNumberOfChildrenInParent = entry.getValue();
 
             int quantityOfParent = getQuantityOfChild(parentID);
-            int numberOfChildrenThatCanFitInParents = (quantityOfParent * maxNumberOfChildrenInParent) - getQuantityOfChild(childID);
+            int numberOfChildrenThatCanFitInCurrentNumberOfParent = (quantityOfParent * maxNumberOfChildrenInParent) - getQuantityOfChild(childID);
+            boolean needToAddMoreOfParent = quantityOfCurrentNode > numberOfChildrenThatCanFitInCurrentNumberOfParent;
 
-            if ( currentQuantity <= numberOfChildrenThatCanFitInParents ) {
-                resourcesToAdd.add( childID , currentQuantity );
+            resourcesToAdd.add( childID , quantityOfCurrentNode );
+            if ( !needToAddMoreOfParent ) {
                 break;
             } else {
-                int amountRemaining = currentQuantity - numberOfChildrenThatCanFitInParents;
-                int newParentsNeeded = (int) Math.ceil((double) amountRemaining / (double) maxNumberOfChildrenInParent);
-                resourcesToAdd.add( childID , currentQuantity);
-                currentQuantity = newParentsNeeded;
+                int amountOfChildrenRemaining = quantityOfCurrentNode - numberOfChildrenThatCanFitInCurrentNumberOfParent;
+                quantityOfCurrentNode = (int) Math.ceil((double) amountOfChildrenRemaining / (double) maxNumberOfChildrenInParent);
                 childID = parentID;
             }
         }

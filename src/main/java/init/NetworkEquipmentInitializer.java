@@ -15,8 +15,9 @@ public class NetworkEquipmentInitializer {
 
     public static void init() {
 
-        String filename = "ccap_equipment_configuration.csv";
-        NetworkEngineer engineer = EngineerFactory.getNetworkEngineer(filename.split("_")[0]);
+//        String filename = "ccap_equipment_configuration.csv";
+        String filename = "cats.csv";
+        NetworkEngineer engineer = EngineerFactory.getNetworkEngineer((filename.split("_")[0]).split(".csv")[0]);
         for (Input input : getData(filename)) {
             engineer.addEquipmentAndSpec(input.origin , input.child , input.childToOrigin);
         }
